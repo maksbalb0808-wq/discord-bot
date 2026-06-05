@@ -1,58 +1,65 @@
 import time
 import requests
 import random
-from datetime import datetime
+from datetime import datetime, timedelta
 
-# ================= НАСТРОЙКИ (ЗАПОЛНИТЕ СВОИ ДАННЫЕ) =================
-TOKEN = "MTUxMTk5NDgzNjc5MjY0MzU4Ng.Gf96Ki.s0REHDT4J4jnP6-ZJ0QcwK0rl2n3qkpoEQfuKs"
-CHANNEL_ID = "1221881016948621356"
+# ================= НАСТРОЙКИ =================
+TOKEN = "СЮДА_ВСТАВЬТЕ_ТОКЕН_ИЗ_БРАУЗЕРА"
+CHANNEL_ID = "СЮДА_ВСТАВЬТЕ_ID_ПОЛЬЗОВАТЕЛЯ"
 MESSAGE = "Доброе утро! Это автоматическое сообщение."
-# =====================================================================
+# =============================================
 
-# ЗАЩИТА №1: Маскировка под реальный браузер Google Chrome на Windows 10
 headers = {
     "Authorization": TOKEN, 
     "Content-Type": "application/json",
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
 }
 
-print(f"[{datetime.now().strftime('%H:%M:%S')}] Сервер запущен платформой Render.")
+print("Скрипт вечной ежедневной отправки запущен в облаке Koyeb.")
 
-# ЗАЩИТА №2: Случайное смещение минут и секунд.
-# Скрипт проснется в 4:00, но сознательно замерзнет на случайное время от 1 до 5 минут.
-random_minutes = random.randint(1, 5)
-random_seconds = random.randint(0, 59)
-total_delay_seconds = (random_minutes * 60) + random_seconds
-
-print(f"Применяем маскировку времени. Задержка составит: {random_minutes} мин. {random_seconds} сек.")
-print(f"Сообщение уйдет примерно в 04:{random_minutes:02d} утра по МСК.")
-
-# Скрипт уходит в ожидание
-time.sleep(total_delay_seconds)
-
-print("Время задержки истекло. Начинаем имитацию действий человека...")
-
-try:
-    # ЗАЩИТА №3: Отправляем в Discord статус «Печатает...»
-    typing_url = f"https://discord.com{CHANNEL_ID}/typing"
-    requests.post(typing_url, headers=headers, timeout=10)
+while True:
+    now = datetime.now()
     
-    # ЗАЩИТА №4: Ждем от 6 до 13 секунд (имитируем реальную скорость набора текста руками)
-    human_typing_speed = random.randint(6, 13)
-    print(f"Имитируем ввод текста в течение {human_typing_speed} сек...")
-    time.sleep(human_typing_speed)
+    # На Koyeb время тоже UTC. 4:00 утра по МСК — это 01:00 ночи по UTC.
+    base_target = now.replace(hour=1, minute=0, second=0, microsecond=0)
     
-    # ОТПРАВКА СООБЩЕНИЯ
-    msg_url = f"https://discord.com{CHANNEL_ID}/messages"
-    payload = {"content": MESSAGE}
-    response = requests.post(msg_url, json=payload, headers=headers, timeout=10)
+    # ЗАЩИТА: Рандомное смещение времени (от 1 до 5 минут)
+    random_minutes = random.randint(1, 5)
+    random_seconds = random.randint(0, 59)
+    target_time = base_target + timedelta(minutes=random_minutes, seconds=random_seconds)
     
-    if response.status_code == 200:
-        print(f"[{datetime.now().strftime('%H:%M:%S')}] Сообщение успешно доставлено жителю чата!")
-    else:
-        print(f"Ошибка! Сервер Discord вернул код: {response.status_code}. Ответ: {response.text}")
+    if now >= target_time:
+        base_target += timedelta(days=1)
+        target_time = base_target + timedelta(minutes=random_minutes, seconds=random_seconds)
+    
+    print(f"Следующее сообщение запланировано на: {target_time.strftime('%Y-%m-%d %H:%M:%S')} (по UTC)")
+    
+    # Ожидание нужного времени
+    while datetime.now() < target_time:
+        time.sleep(10)
         
-except Exception as e:
-    print(f"Произошел сетевой сбой при отправке: {e}")
-
-print("Работа скрипта на сегодня завершена. Сервер отключается.")
+    print("Время пришло. Имитируем действия человека...")
+    
+    try:
+        # ЗАЩИТА: Статус "Печатает..."
+        typing_url = f"https://discord.com{CHANNEL_ID}/typing"
+        requests.post(typing_url, headers=headers, timeout=10)
+        
+        # ЗАЩИТА: Имитация ввода текста (от 6 до 12 секунд)
+        time.sleep(random.randint(6, 12))
+        
+        # Отправка
+        msg_url = f"https://discord.com{CHANNEL_ID}/messages"
+        payload = {"content": MESSAGE}
+        response = requests.post(msg_url, json=payload, headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            print("Сообщение успешно доставлено!")
+        else:
+            print(f"Ошибка! Код сервера Discord: {response.status_code}")
+            
+    except Exception as e:
+        print(f"Сетевая ошибка: {e}")
+        
+    # Спим 5 минут, чтобы избежать повтора в ту же минуту
+    time.sleep(300)
